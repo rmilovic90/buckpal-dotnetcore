@@ -1,0 +1,12 @@
+# Visual Studio cache/options directory
+.vs/
+
+# Visual Studio user-specific files
+*.user
+
+# JetBrains Rider cache/settings directory
+.idea/
+
+# Build artifacts directory
+bin/
+obj/
