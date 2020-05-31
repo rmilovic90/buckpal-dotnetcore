@@ -1,8 +1,14 @@
+using System;
+using System.Threading.Tasks;
 using Buckpal.Core.Application.Ports.Input;
+using Buckpal.Core.Application.Ports.Output;
 using Buckpal.Core.Application.Services;
+using Buckpal.Core.Domain;
+using FluentAssertions;
 using LightBDD.Framework;
 using LightBDD.Framework.Scenarios;
 using LightBDD.XUnit2;
+using NSubstitute;
 using Xunit;
 
 [assembly:LightBddScope]
@@ -16,50 +22,100 @@ namespace Buckpal.Core.Application
         I want to send money from one account to another")]
     public sealed class SendMoneyTests : FeatureFixture
     {
-        private const decimal SampleAmount = 10.50M;
+        private readonly ILoadAccount _loadAccount = Substitute.For<ILoadAccount>();
+        private readonly ILockAccount _lockAccount = Substitute.For<ILockAccount>();
+        private readonly IUpdateAccountState _updateAccountState = Substitute.For<IUpdateAccountState>();
+        private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
 
         private readonly ISendMoney _service = ApplicationServicesFactory.CreateSendMoneyService();
 
+        private Account _sourceAccount;
+        private Account _targetAccount;
+
+        private bool _sendMoneyResult;
+
         [Scenario]
-        public void Transaction_succeeds()
+        public async Task Transaction_succeeds_when_accounts_exist_and_have_sufficient_balances()
         {
-            Runner.RunScenario(
-                given => a_valid_source_account(),
-                and => a_valid_target_account(),
-                and => withdrawal_from_source_account_is_allowed(),
-                and => deposit_to_target_account_is_allowed(),
-                when => sending_money(SampleAmount),
-                then => the_transaction_is_successful());
+            await Runner.RunScenarioAsync(
+                given => an_existing_source_account(
+                    AccountIdOf(1L),
+                    AccountBalanceOf(100M)),
+                and => an_existing_target_account(
+                    AccountIdOf(2L),
+                    AccountBalanceOf(150M)),
+                when => sending_money(
+                    AccountIdOf(1L),
+                    AccountIdOf(2L),
+                    MoneyOf(10.5M)),
+                then => the_transaction_is_successful(
+                    AccountBalanceOf(89.5M),
+                    AccountBalanceOf(160.5M)));
         }
 
-        private void the_transaction_is_successful()
+        private Task an_existing_source_account(AccountId id, Money balance)
         {
-            throw new System.NotImplementedException();
+            _sourceAccount = AccountOf(id);
+
+            _loadAccount.LoadAccount(
+                    Arg.Is(id),
+                    Arg.Any<DateTime>())
+                .Returns(_sourceAccount);
+
+            return Task.CompletedTask;
         }
 
-        private void a_valid_source_account()
+        private Task an_existing_target_account(AccountId id, Money balance)
         {
-            throw new System.NotImplementedException();
+            _targetAccount = AccountOf(id);
+
+            _loadAccount.LoadAccount(
+                    Arg.Is(id),
+                    Arg.Any<DateTime>())
+                .Returns(_targetAccount);
+
+            return Task.CompletedTask;
         }
 
-        private void a_valid_target_account()
+        private async Task sending_money(AccountId sourceAccountId, AccountId targetAccountId, Money transactionAmount)
         {
-            throw new System.NotImplementedException();
+            var command = new SendMoneyCommand(
+                sourceAccountId,
+                targetAccountId,
+                transactionAmount);
+
+            _sendMoneyResult = await _service.SendMoney(command);
         }
 
-        private void withdrawal_from_source_account_is_allowed()
+        private Task the_transaction_is_successful(Money expectedSourceAccountBalance, Money expectedTargetAccountBalance)
         {
-            throw new System.NotImplementedException();
+            _sendMoneyResult.Should().BeTrue();
+
+            Received.InOrder(async () =>
+            {
+                await _lockAccount.Lock(_sourceAccount.Id);
+                await _updateAccountState.Update(_sourceAccount);
+                await _lockAccount.Release(_sourceAccount.Id);
+
+                await _lockAccount.Lock(_targetAccount.Id);
+                await _updateAccountState.Update(_targetAccount);
+                await _lockAccount.Release(_targetAccount.Id);
+
+                await _unitOfWork.Commit();
+            });
+
+            _sourceAccount.Balance.Should().Be(expectedSourceAccountBalance);
+            _targetAccount.Balance.Should().Be(expectedTargetAccountBalance);
+
+            return Task.CompletedTask;
         }
 
-        private void deposit_to_target_account_is_allowed()
-        {
-            throw new System.NotImplementedException();
-        }
+        private static Account AccountOf(AccountId id) => new Account(id);
 
-        private void sending_money(decimal amount)
-        {
-            throw new System.NotImplementedException();
-        }
+        private static AccountId AccountIdOf(long value) => new AccountId(value);
+
+        private static Money AccountBalanceOf(decimal amount) => MoneyOf(amount);
+
+        private static Money MoneyOf(decimal amount) => new Money(amount);
     }
 }
