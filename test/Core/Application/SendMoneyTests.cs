@@ -22,17 +22,28 @@ namespace Buckpal.Core.Application
         I want to send money from one account to another")]
     public sealed class SendMoneyTests : FeatureFixture
     {
-        private readonly ILoadAccount _loadAccount = Substitute.For<ILoadAccount>();
-        private readonly ILockAccount _lockAccount = Substitute.For<ILockAccount>();
-        private readonly IUpdateAccountState _updateAccountState = Substitute.For<IUpdateAccountState>();
-        private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
+        private readonly ILoadAccount _loadAccount;
+        private readonly ILockAccount _lockAccount;
+        private readonly IUpdateAccountState _updateAccountState;
+        private readonly IUnitOfWork _unitOfWork;
 
-        private readonly ISendMoney _service = ApplicationServicesFactory.CreateSendMoneyService();
+        private readonly ISendMoney _service;
 
         private Account _sourceAccount;
         private Account _targetAccount;
 
         private bool _sendMoneyResult;
+
+        public SendMoneyTests()
+        {
+            _loadAccount = Substitute.For<ILoadAccount>();
+            _lockAccount = Substitute.For<ILockAccount>();
+            _updateAccountState = Substitute.For<IUpdateAccountState>();
+            _unitOfWork = Substitute.For<IUnitOfWork>();
+
+            _service = ApplicationServicesFactory.CreateSendMoneyService(_loadAccount, _lockAccount,
+                _updateAccountState, _unitOfWork);
+        }
 
         [Scenario]
         public async Task Transaction_succeeds_when_accounts_exist_and_have_sufficient_balances()
@@ -55,7 +66,7 @@ namespace Buckpal.Core.Application
 
         private Task an_existing_source_account(AccountId id, Money balance)
         {
-            _sourceAccount = AccountOf(id);
+            _sourceAccount = AccountOf(id, balance);
 
             _loadAccount.LoadAccount(
                     Arg.Is(id),
@@ -67,7 +78,7 @@ namespace Buckpal.Core.Application
 
         private Task an_existing_target_account(AccountId id, Money balance)
         {
-            _targetAccount = AccountOf(id);
+            _targetAccount = AccountOf(id, balance);
 
             _loadAccount.LoadAccount(
                     Arg.Is(id),
@@ -93,24 +104,30 @@ namespace Buckpal.Core.Application
 
             Received.InOrder(async () =>
             {
-                await _lockAccount.Lock(_sourceAccount.Id);
+                var (sourceAccountId, _) = _sourceAccount;
+                var (targetAccountId, _) = _targetAccount;
+
+                await _lockAccount.Lock(sourceAccountId);
+                await _lockAccount.Lock(targetAccountId);
+                await _unitOfWork.Commit();
+
                 await _updateAccountState.Update(_sourceAccount);
-                await _lockAccount.Release(_sourceAccount.Id);
-
-                await _lockAccount.Lock(_targetAccount.Id);
                 await _updateAccountState.Update(_targetAccount);
-                await _lockAccount.Release(_targetAccount.Id);
 
+                await _lockAccount.Release(sourceAccountId);
+                await _lockAccount.Release(targetAccountId);
                 await _unitOfWork.Commit();
             });
 
-            _sourceAccount.Balance.Should().Be(expectedSourceAccountBalance);
-            _targetAccount.Balance.Should().Be(expectedTargetAccountBalance);
+            var (_, sourceAccountBalance) = _sourceAccount;
+            var (_, targetAccountBalance) = _targetAccount;
+            sourceAccountBalance.Should().Be(expectedSourceAccountBalance);
+            targetAccountBalance.Should().Be(expectedTargetAccountBalance);
 
             return Task.CompletedTask;
         }
 
-        private static Account AccountOf(AccountId id) => new Account(id);
+        private static Account AccountOf(AccountId id, Money balance) => new Account(id, balance);
 
         private static AccountId AccountIdOf(long value) => new AccountId(value);
 

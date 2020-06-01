@@ -5,8 +5,6 @@ namespace Buckpal.Core.Domain
 {
     public sealed class Money
     {
-        public static Money Zero => new Money(decimal.Zero);
-
         private readonly decimal _amount;
 
         public Money(decimal amount)
@@ -33,5 +31,9 @@ namespace Buckpal.Core.Domain
         public static bool operator !=(Money left, Money right) => !Equals(left, right);
 
         public static implicit operator decimal(Money money) => money._amount;
+
+        public static Money operator +(Money left, Money right) => new Money(left._amount + right._amount);
+
+        public static Money operator -(Money left, Money right) => new Money(left._amount - right._amount);
     }
 }
