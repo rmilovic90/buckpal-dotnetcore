@@ -28,8 +28,8 @@ namespace Buckpal.Core.Application.Services
 
             await LockAccounts(command.SourceAccountId, command.TargetAccountId);
 
-            sourceAccount.Withdraw(MoneyOf(command.Amount));
-            targetAccount.Deposit(MoneyOf(command.Amount));
+            sourceAccount.Withdraw(Money.Of(command.Amount));
+            targetAccount.Deposit(Money.Of(command.Amount));
 
             await UpdateAccounts(sourceAccount, targetAccount);
             await UnlockAccounts(command.SourceAccountId, command.TargetAccountId);
@@ -42,14 +42,14 @@ namespace Buckpal.Core.Application.Services
             var baselineDate = DateTime.Now.AddDays(-10);
 
             return (
-                await _loadAccount.LoadAccount(AccountIdOf(sourceAccountId), baselineDate),
-                await _loadAccount.LoadAccount(AccountIdOf(targetAccountId), baselineDate));
+                await _loadAccount.LoadAccount(AccountId.Of(sourceAccountId), baselineDate),
+                await _loadAccount.LoadAccount(AccountId.Of(targetAccountId), baselineDate));
         }
 
         private async Task LockAccounts(long sourceAccountId, long targetAccountId)
         {
-            await _lockAccount.Lock(AccountIdOf(sourceAccountId));
-            await _lockAccount.Lock(AccountIdOf(targetAccountId));
+            await _lockAccount.Lock(AccountId.Of(sourceAccountId));
+            await _lockAccount.Lock(AccountId.Of(targetAccountId));
             await _unitOfWork.Commit();
         }
 
@@ -61,13 +61,9 @@ namespace Buckpal.Core.Application.Services
 
         private async Task UnlockAccounts(long sourceAccountId, long targetAccountId)
         {
-            await _lockAccount.Release(AccountIdOf(sourceAccountId));
-            await _lockAccount.Release(AccountIdOf(targetAccountId));
+            await _lockAccount.Release(AccountId.Of(sourceAccountId));
+            await _lockAccount.Release(AccountId.Of(targetAccountId));
             await _unitOfWork.Commit();
         }
-
-        private static AccountId AccountIdOf(long value) => new AccountId(value);
-
-        private static Money MoneyOf(decimal amount) => new Money(amount);
     }
 }

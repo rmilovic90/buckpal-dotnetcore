@@ -50,23 +50,23 @@ namespace Buckpal.Core.Application
         {
             await Runner.RunScenarioAsync(
                 given => an_existing_source_account(
-                    AccountIdOf(1L),
-                    AccountBalanceOf(100M)),
+                    AccountId.Of(1L),
+                    Money.Of(100M)),
                 and => an_existing_target_account(
-                    AccountIdOf(2L),
-                    AccountBalanceOf(150M)),
+                    AccountId.Of(2L),
+                    Money.Of(150M)),
                 when => sending_money(
-                    AccountIdOf(1L),
-                    AccountIdOf(2L),
-                    MoneyOf(10.5M)),
+                    AccountId.Of(1L),
+                    AccountId.Of(2L),
+                    Money.Of(10.5M)),
                 then => the_transaction_is_successful(
-                    AccountBalanceOf(89.5M),
-                    AccountBalanceOf(160.5M)));
+                    Money.Of(89.5M),
+                    Money.Of(160.5M)));
         }
 
         private Task an_existing_source_account(AccountId id, Money balance)
         {
-            _sourceAccount = AccountOf(id, balance);
+            _sourceAccount = Account.ExistingOf(id, balance);
 
             _loadAccount.LoadAccount(
                     Arg.Is(id),
@@ -78,7 +78,7 @@ namespace Buckpal.Core.Application
 
         private Task an_existing_target_account(AccountId id, Money balance)
         {
-            _targetAccount = AccountOf(id, balance);
+            _targetAccount = Account.ExistingOf(id, balance);
 
             _loadAccount.LoadAccount(
                     Arg.Is(id),
@@ -126,13 +126,5 @@ namespace Buckpal.Core.Application
 
             return Task.CompletedTask;
         }
-
-        private static Account AccountOf(AccountId id, Money balance) => new Account(id, balance);
-
-        private static AccountId AccountIdOf(long value) => new AccountId(value);
-
-        private static Money AccountBalanceOf(decimal amount) => MoneyOf(amount);
-
-        private static Money MoneyOf(decimal amount) => new Money(amount);
     }
 }

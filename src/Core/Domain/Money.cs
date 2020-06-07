@@ -5,17 +5,19 @@ namespace Buckpal.Core.Domain
 {
     public sealed class Money
     {
-        private readonly decimal _amount;
-
-        public Money(decimal amount)
+        public static Money Of(decimal amount)
         {
             if (amount < decimal.Zero)
                 throw new ArgumentException(
                     $"{nameof(Money)} ${amount} can't be less than {decimal.Zero}.",
                     nameof(amount));
 
-            _amount = amount;
+            return new Money(amount);
         }
+
+        private readonly decimal _amount;
+
+        private Money(decimal amount) => _amount = amount;
 
         public override bool Equals(object obj) =>
             ReferenceEquals(this, obj) || obj is Money other && Equals(other);

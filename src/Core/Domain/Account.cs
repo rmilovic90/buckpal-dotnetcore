@@ -2,15 +2,23 @@
 
 namespace Buckpal.Core.Domain
 {
-    public class Account
+    public sealed class Account
     {
+        public static Account ExistingOf(AccountId id, Money balance)
+        {
+            if (id == null) throw new ArgumentNullException(nameof(id));
+            if (balance == null) throw new ArgumentNullException(nameof(balance));
+
+            return new Account(id, balance);
+        }
+
         private AccountId Id { get; }
         private Money Balance { get; set; }
 
-        public Account(AccountId id, Money balance)
+        private Account(AccountId id, Money balance)
         {
-            Id = id ?? throw new ArgumentNullException(nameof(id));
-            Balance = balance ?? throw new ArgumentNullException(nameof(balance));
+            Id = id;
+            Balance = balance;
         }
 
         public void Withdraw(Money money)

@@ -10,7 +10,7 @@ namespace Buckpal.Core.Domain
         [Fact]
         public void Requires_positive_or_zero_amount()
         {
-            Action createMoney = () => new Money(-0.5M);
+            Action createMoney = () => Money.Of(-0.5M);
 
             createMoney.Should().Throw<ArgumentException>();
         }
@@ -18,23 +18,23 @@ namespace Buckpal.Core.Domain
         [Fact]
         public void Adds_amounts()
         {
-            var left = new Money(0.6M);
-            var right = new Money(2.3M);
+            var left = Money.Of(0.6M);
+            var right = Money.Of(2.3M);
 
             var result = left + right;
 
-            result.Should().Be(new Money(2.9M));
+            result.Should().Be(Money.Of(2.9M));
         }
 
         [Fact]
         public void Subtracts_amounts()
         {
-            var left = new Money(3.1M);
-            var right = new Money(1.9M);
+            var left = Money.Of(3.1M);
+            var right = Money.Of(1.9M);
 
             var result = left - right;
 
-            result.Should().Be(new Money(1.2M));
+            result.Should().Be(Money.Of(1.2M));
         }
     }
 }

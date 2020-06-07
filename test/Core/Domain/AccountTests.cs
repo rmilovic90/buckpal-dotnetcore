@@ -8,17 +8,17 @@ namespace Buckpal.Core.Domain
     public sealed class AccountTests
     {
         [Fact]
-        public void Requires_id()
+        public void Requires_id_for_existing_account()
         {
-            Action createAccount = () => new Account(null, new Money(10.5M));
+            Action createAccount = () => Account.ExistingOf(null, Money.Of(10.5M));
 
             createAccount.Should().Throw<ArgumentNullException>();
         }
 
         [Fact]
-        public void Requires_balance()
+        public void Requires_balance_for_existing_account()
         {
-            Action createAccount = () => new Account(new AccountId(1L), null);
+            Action createAccount = () => Account.ExistingOf(AccountId.Of(1L), null);
 
             createAccount.Should().Throw<ArgumentNullException>();
         }
@@ -26,23 +26,23 @@ namespace Buckpal.Core.Domain
         [Fact]
         public void Withdraws_from_balance()
         {
-            var account = new Account(new AccountId(1L), new Money(10.7M));
+            var account = Account.ExistingOf(AccountId.Of(1L), Money.Of(10.7M));
 
-            account.Withdraw(new Money(1.5M));
+            account.Withdraw(Money.Of(1.5M));
 
             var (_, balance) = account;
-            balance.Should().Be(new Money(9.2M));
+            balance.Should().Be(Money.Of(9.2M));
         }
 
         [Fact]
         public void Deposits_from_balance()
         {
-            var account = new Account(new AccountId(1L), new Money(10.7M));
+            var account = Account.ExistingOf(AccountId.Of(1L), Money.Of(10.7M));
 
-            account.Deposit(new Money(1.5M));
+            account.Deposit(Money.Of(1.5M));
 
             var (_, balance) = account;
-            balance.Should().Be(new Money(12.2M));
+            balance.Should().Be(Money.Of(12.2M));
         }
     }
 }

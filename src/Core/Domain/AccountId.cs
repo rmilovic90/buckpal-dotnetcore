@@ -2,9 +2,11 @@
 {
     public sealed class AccountId
     {
+        public static AccountId Of(long value) => new AccountId(value);
+
         private readonly long _value;
 
-        public AccountId(long value) => _value = value;
+        private AccountId(long value) => _value = value;
 
         public override bool Equals(object obj) =>
             ReferenceEquals(this, obj) || obj is AccountId other && Equals(other);
