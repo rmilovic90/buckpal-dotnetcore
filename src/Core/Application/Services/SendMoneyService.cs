@@ -22,7 +22,7 @@ namespace Buckpal.Core.Application.Services
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         }
 
-        public async Task<bool> SendMoney(SendMoneyCommand command)
+        public async Task SendMoney(SendMoneyCommand command)
         {
             var (sourceAccount, targetAccount) = await LoadAccounts(command.SourceAccountId, command.TargetAccountId);
 
@@ -33,8 +33,6 @@ namespace Buckpal.Core.Application.Services
 
             await UpdateAccounts(sourceAccount, targetAccount);
             await UnlockAccounts(command.SourceAccountId, command.TargetAccountId);
-
-            return true;
         }
 
         private async Task<(Account, Account)> LoadAccounts(long sourceAccountId, long targetAccountId)

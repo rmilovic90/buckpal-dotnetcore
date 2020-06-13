@@ -32,7 +32,7 @@ namespace Buckpal.Core.Application
         private Account _sourceAccount;
         private Account _targetAccount;
 
-        private bool _sendMoneyResult;
+        private Func<Task> _sendMoneyResult;
 
         public SendMoneyTests()
         {
@@ -64,6 +64,28 @@ namespace Buckpal.Core.Application
                     Money.Of(160.5M)));
         }
 
+        [Scenario]
+        public async Task Withdrawal_from_source_account_fails_due_to_insufficient_funds()
+        {
+            await Runner.RunScenarioAsync(
+                given => an_existing_source_account(
+                    AccountId.Of(1L),
+                    Money.Of(100M)),
+                and => an_existing_target_account(
+                    AccountId.Of(2L),
+                    Money.Of(150M)),
+                when => sending_money(
+                    AccountId.Of(1L),
+                    AccountId.Of(2L),
+                    Money.Of(150.5M)),
+                then => the_transaction_fails_because_of_source_account_insufficient_funds(),
+                and => the_source_and_target_account_lock_is_released(),
+                and => the_source_and_target_account_balances_did_not_change(
+                    Money.Of(100M),
+                    Money.Of(150M))
+            );
+        }
+
         private Task an_existing_source_account(AccountId id, Money balance)
         {
             _sourceAccount = Account.ExistingOf(id, balance);
@@ -88,19 +110,22 @@ namespace Buckpal.Core.Application
             return Task.CompletedTask;
         }
 
-        private async Task sending_money(AccountId sourceAccountId, AccountId targetAccountId, Money transactionAmount)
+        private Task sending_money(AccountId sourceAccountId, AccountId targetAccountId, Money transactionAmount)
         {
             var command = new SendMoneyCommand(
                 sourceAccountId,
                 targetAccountId,
                 transactionAmount);
 
-            _sendMoneyResult = await _service.SendMoney(command);
+            _sendMoneyResult = () => _service.SendMoney(command);
+
+            return Task.CompletedTask;
         }
 
-        private Task the_transaction_is_successful(Money expectedSourceAccountBalance, Money expectedTargetAccountBalance)
+        private async Task the_transaction_is_successful(
+            Money expectedSourceAccountBalance, Money expectedTargetAccountBalance)
         {
-            _sendMoneyResult.Should().BeTrue();
+            await _sendMoneyResult.Should().NotThrowAsync();
 
             Received.InOrder(async () =>
             {
@@ -123,8 +148,44 @@ namespace Buckpal.Core.Application
             var (_, targetAccountBalance) = _targetAccount;
             sourceAccountBalance.Should().Be(expectedSourceAccountBalance);
             targetAccountBalance.Should().Be(expectedTargetAccountBalance);
+        }
+
+        private async Task the_transaction_fails_because_of_source_account_insufficient_funds()
+        {
+            (await _sendMoneyResult.Should().ThrowExactlyAsync<AccountInsufficientFundsException>())
+                .Which.Account.Should().Be(_sourceAccount);
+        }
+
+        private Task the_source_and_target_account_lock_is_released()
+        {
+            Received.InOrder(async () =>
+            {
+                var (sourceAccountId, _) = _sourceAccount;
+                var (targetAccountId, _) = _targetAccount;
+
+                await _lockAccount.Lock(sourceAccountId);
+                await _lockAccount.Lock(targetAccountId);
+                await _unitOfWork.Commit();
+
+                await _lockAccount.Release(sourceAccountId);
+                await _lockAccount.Release(targetAccountId);
+                await _unitOfWork.Commit();
+            });
 
             return Task.CompletedTask;
+        }
+
+        private async Task the_source_and_target_account_balances_did_not_change(
+            Money expectedSourceAccountBalance, Money expectedTargetAccountBalance)
+        {
+            await _updateAccountState.DidNotReceive().Update(_sourceAccount);
+            await _updateAccountState.DidNotReceive().Update(_targetAccount);
+
+            var (_, sourceAccountBalance) = _sourceAccount;
+            sourceAccountBalance.Should().Be(expectedSourceAccountBalance);
+
+            var (_, targetAccountBalance) = _sourceAccount;
+            targetAccountBalance.Should().Be(expectedTargetAccountBalance);
         }
     }
 }

@@ -44,7 +44,7 @@ namespace Buckpal.Core.Domain
             balance = Balance;
         }
 
-        public override string ToString() => $"{nameof(Account)} {{ {nameof(Id)}: {Id} }}";
+        public override string ToString() => $"{nameof(Account)} {{ {nameof(Id)}: {Id}, {nameof(Balance)}: {Balance} }}";
 
         public static bool operator ==(Account left, Account right) => Equals(left, right);
 

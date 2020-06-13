@@ -4,6 +4,6 @@ namespace Buckpal.Core.Application.Ports.Input
 {
     public interface ISendMoney
     {
-        Task<bool> SendMoney(SendMoneyCommand command);
+        Task SendMoney(SendMoneyCommand command);
     }
 }
