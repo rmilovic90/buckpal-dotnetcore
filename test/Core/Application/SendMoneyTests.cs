@@ -184,7 +184,7 @@ namespace Buckpal.Core.Application
             var (_, sourceAccountBalance) = _sourceAccount;
             sourceAccountBalance.Should().Be(expectedSourceAccountBalance);
 
-            var (_, targetAccountBalance) = _sourceAccount;
+            var (_, targetAccountBalance) = _targetAccount;
             targetAccountBalance.Should().Be(expectedTargetAccountBalance);
         }
     }

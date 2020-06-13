@@ -28,7 +28,9 @@ namespace Buckpal.Core.Application.Services
 
             await LockAccounts(command.SourceAccountId, command.TargetAccountId);
 
-            sourceAccount.Withdraw(Money.Of(command.Amount));
+            await sourceAccount.Withdraw(
+                Money.Of(command.Amount),
+                () => UnlockAccounts(command.SourceAccountId, command.TargetAccountId));
             targetAccount.Deposit(Money.Of(command.Amount));
 
             await UpdateAccounts(sourceAccount, targetAccount);

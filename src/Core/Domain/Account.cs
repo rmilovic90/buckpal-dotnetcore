@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 
 namespace Buckpal.Core.Domain
 {
@@ -21,8 +22,15 @@ namespace Buckpal.Core.Domain
             Balance = balance;
         }
 
-        public void Withdraw(Money money)
+        public async Task Withdraw(Money money, Func<Task> onFailure)
         {
+            if (money > Balance)
+            {
+                await onFailure();
+
+                throw new AccountInsufficientFundsException(this);
+            }
+
             Balance -= money;
         }
 
