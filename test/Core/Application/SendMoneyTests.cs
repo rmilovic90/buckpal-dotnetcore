@@ -46,7 +46,7 @@ namespace Buckpal.Core.Application
         }
 
         [Scenario]
-        public async Task Transaction_succeeds_when_accounts_exist_and_have_sufficient_balances()
+        public async Task Transaction_succeeds()
         {
             await Runner.RunScenarioAsync(
                 given => an_existing_source_account(
@@ -61,7 +61,42 @@ namespace Buckpal.Core.Application
                     Money.Of(10.5M)),
                 then => the_transaction_is_successful(
                     Money.Of(89.5M),
-                    Money.Of(160.5M)));
+                    Money.Of(160.5M))
+            );
+        }
+
+        [Scenario]
+        public async Task Transaction_fails_due_to_non_existing_source_account()
+        {
+            await Runner.RunScenarioAsync(
+                given => an_existing_target_account(
+                    AccountId.Of(2L),
+                    Money.Of(150M)),
+                when => sending_money(
+                    AccountId.Of(1L),
+                    AccountId.Of(2L),
+                    Money.Of(10.5M)),
+                then => the_transaction_fails_because_of_non_existing_account(AccountId.Of(1L)),
+                and => no_interactions_with_source_and_target_accounts_were_performed(),
+                and => the_target_account_balance_did_not_change(Money.Of(150M))
+            );
+        }
+
+        [Scenario]
+        public async Task Transaction_fails_due_to_non_existing_target_account()
+        {
+            await Runner.RunScenarioAsync(
+                given => an_existing_source_account(
+                    AccountId.Of(1L),
+                    Money.Of(100M)),
+                when => sending_money(
+                    AccountId.Of(1L),
+                    AccountId.Of(2L),
+                    Money.Of(10.5M)),
+                then => the_transaction_fails_because_of_non_existing_account(AccountId.Of(2L)),
+                and => no_interactions_with_source_and_target_accounts_were_performed(),
+                and => the_source_account_balance_did_not_change(Money.Of(100M))
+            );
         }
 
         [Scenario]
@@ -150,6 +185,41 @@ namespace Buckpal.Core.Application
             targetAccountBalance.Should().Be(expectedTargetAccountBalance);
         }
 
+        private async Task the_transaction_fails_because_of_non_existing_account(AccountId id)
+        {
+            (await _sendMoneyResult.Should().ThrowExactlyAsync<AccountNotFoundException>())
+                .Which.Id.Should().Be(id);
+        }
+
+        private async Task no_interactions_with_source_and_target_accounts_were_performed()
+        {
+            var (sourceAccountId, _) = _sourceAccount;
+            var (targetAccountId, _) = _targetAccount;
+
+            await _lockAccount.DidNotReceive().Lock(sourceAccountId);
+            await _updateAccountState.DidNotReceive().Update(_sourceAccount);
+            await _lockAccount.DidNotReceive().Release(sourceAccountId);
+            await _lockAccount.DidNotReceive().Lock(targetAccountId);
+            await _updateAccountState.DidNotReceive().Update(_targetAccount);
+            await _lockAccount.DidNotReceive().Release(targetAccountId);
+        }
+
+        private Task the_target_account_balance_did_not_change(Money expectedBalance)
+        {
+            var (_, accountBalance) = _targetAccount;
+            accountBalance.Should().Be(expectedBalance);
+
+            return Task.CompletedTask;
+        }
+
+        private Task the_source_account_balance_did_not_change(Money expectedBalance)
+        {
+            var (_, accountBalance) = _sourceAccount;
+            accountBalance.Should().Be(expectedBalance);
+
+            return Task.CompletedTask;
+        }
+
         private async Task the_transaction_fails_because_of_source_account_insufficient_funds()
         {
             (await _sendMoneyResult.Should().ThrowExactlyAsync<AccountInsufficientFundsException>())
@@ -181,11 +251,8 @@ namespace Buckpal.Core.Application
             await _updateAccountState.DidNotReceive().Update(_sourceAccount);
             await _updateAccountState.DidNotReceive().Update(_targetAccount);
 
-            var (_, sourceAccountBalance) = _sourceAccount;
-            sourceAccountBalance.Should().Be(expectedSourceAccountBalance);
-
-            var (_, targetAccountBalance) = _targetAccount;
-            targetAccountBalance.Should().Be(expectedTargetAccountBalance);
+            await the_source_account_balance_did_not_change(expectedSourceAccountBalance);
+            await the_target_account_balance_did_not_change(expectedTargetAccountBalance);
         }
     }
 }
