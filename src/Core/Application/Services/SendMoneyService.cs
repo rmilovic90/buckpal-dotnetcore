@@ -42,9 +42,14 @@ namespace Buckpal.Core.Application.Services
             var baselineDate = DateTime.Now.AddDays(-10);
 
             return (
-                await _loadAccount.LoadAccount(AccountId.Of(sourceAccountId), baselineDate),
-                await _loadAccount.LoadAccount(AccountId.Of(targetAccountId), baselineDate));
+                await LoadAccount(sourceAccountId, baselineDate),
+                await LoadAccount(targetAccountId, baselineDate)
+            );
         }
+
+        private async Task<Account> LoadAccount(long id, DateTime baselineDate) =>
+            (await _loadAccount.LoadAccount(AccountId.Of(id), baselineDate))
+                ?? throw new AccountNotFoundException(AccountId.Of(id));
 
         private async Task LockAccounts(long sourceAccountId, long targetAccountId)
         {

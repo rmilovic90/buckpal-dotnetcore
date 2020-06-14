@@ -193,15 +193,9 @@ namespace Buckpal.Core.Application
 
         private async Task no_interactions_with_source_and_target_accounts_were_performed()
         {
-            var (sourceAccountId, _) = _sourceAccount;
-            var (targetAccountId, _) = _targetAccount;
-
-            await _lockAccount.DidNotReceive().Lock(sourceAccountId);
-            await _updateAccountState.DidNotReceive().Update(_sourceAccount);
-            await _lockAccount.DidNotReceive().Release(sourceAccountId);
-            await _lockAccount.DidNotReceive().Lock(targetAccountId);
-            await _updateAccountState.DidNotReceive().Update(_targetAccount);
-            await _lockAccount.DidNotReceive().Release(targetAccountId);
+            await _lockAccount.DidNotReceiveWithAnyArgs().Lock(default);
+            await _updateAccountState.DidNotReceiveWithAnyArgs().Update(default);
+            await _lockAccount.DidNotReceiveWithAnyArgs().Release(default);
         }
 
         private Task the_target_account_balance_did_not_change(Money expectedBalance)
