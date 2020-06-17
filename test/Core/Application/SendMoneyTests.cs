@@ -52,6 +52,7 @@ namespace Buckpal.Core.Application
                 given => an_existing_source_account(
                     AccountId.Of(1L),
                     Money.Of(100M)),
+                and => the_maximum_allowed_transaction_amount_is(Money.Of(500M)),
                 and => an_existing_target_account(
                     AccountId.Of(2L),
                     Money.Of(150M)),
@@ -72,6 +73,7 @@ namespace Buckpal.Core.Application
                 given => an_existing_target_account(
                     AccountId.Of(2L),
                     Money.Of(150M)),
+                and => the_maximum_allowed_transaction_amount_is(Money.Of(500M)),
                 when => sending_money(
                     AccountId.Of(1L),
                     AccountId.Of(2L),
@@ -89,6 +91,7 @@ namespace Buckpal.Core.Application
                 given => an_existing_source_account(
                     AccountId.Of(1L),
                     Money.Of(100M)),
+                and => the_maximum_allowed_transaction_amount_is(Money.Of(500M)),
                 when => sending_money(
                     AccountId.Of(1L),
                     AccountId.Of(2L),
@@ -96,6 +99,31 @@ namespace Buckpal.Core.Application
                 then => the_transaction_fails_because_of_non_existing_account(AccountId.Of(2L)),
                 and => no_interactions_with_source_and_target_accounts_were_performed(),
                 and => the_source_account_balance_did_not_change(Money.Of(100M))
+            );
+        }
+
+        [Scenario]
+        public async Task Transaction_fails_due_to_amount_being_higher_than_allowed()
+        {
+            await Runner.RunScenarioAsync(
+                given => an_existing_source_account(
+                    AccountId.Of(1L),
+                    Money.Of(100M)),
+                and => an_existing_target_account(
+                    AccountId.Of(2L),
+                    Money.Of(150M)),
+                and => the_maximum_allowed_transaction_amount_is(Money.Of(10M)),
+                when => sending_money(
+                    AccountId.Of(1L),
+                    AccountId.Of(2L),
+                    Money.Of(10.5M)),
+                then => the_transaction_fails_because_of_allowed_amount_overdraw(
+                    Money.Of(10.5M),
+                    Money.Of(10M)),
+                and => no_interactions_with_source_and_target_accounts_were_performed(),
+                and => the_source_and_target_account_balances_did_not_change(
+                    Money.Of(100M),
+                    Money.Of(150M))
             );
         }
 
@@ -109,6 +137,7 @@ namespace Buckpal.Core.Application
                 and => an_existing_target_account(
                     AccountId.Of(2L),
                     Money.Of(150M)),
+                and => the_maximum_allowed_transaction_amount_is(Money.Of(500M)),
                 when => sending_money(
                     AccountId.Of(1L),
                     AccountId.Of(2L),
@@ -142,6 +171,11 @@ namespace Buckpal.Core.Application
                     Arg.Any<DateTime>())
                 .Returns(_targetAccount);
 
+            return Task.CompletedTask;
+        }
+
+        private Task the_maximum_allowed_transaction_amount_is(Money amount)
+        {
             return Task.CompletedTask;
         }
 
@@ -189,6 +223,14 @@ namespace Buckpal.Core.Application
         {
             (await _sendMoneyResult.Should().ThrowExactlyAsync<AccountNotFoundException>())
                 .Which.Id.Should().Be(id);
+        }
+
+        private async Task the_transaction_fails_because_of_allowed_amount_overdraw(
+            Money transactionAmount, Money maximumAllowedTransactionAmount)
+        {
+            (await _sendMoneyResult.Should().ThrowExactlyAsync<AllowedTransactionAmountOverdrawException>())
+                .Where(exception => exception.TransactionAmount == transactionAmount)
+                .Where(exception => exception.MaximumAllowedTransactionAmount == maximumAllowedTransactionAmount);
         }
 
         private async Task no_interactions_with_source_and_target_accounts_were_performed()
