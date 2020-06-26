@@ -8,14 +8,17 @@ namespace Buckpal.Core.Application.Services
 {
     internal sealed class SendMoneyService : ISendMoney
     {
+        private readonly IProvideSendMoneyConfiguration _provideSendMoneyConfiguration;
         private readonly ILoadAccount _loadAccount;
         private readonly ILockAccount _lockAccount;
         private readonly IUpdateAccountState _updateAccountState;
         private readonly IUnitOfWork _unitOfWork;
 
-        public SendMoneyService(ILoadAccount loadAccount, ILockAccount lockAccount,
-            IUpdateAccountState updateAccountState, IUnitOfWork unitOfWork)
+        public SendMoneyService(IProvideSendMoneyConfiguration provideSendMoneyConfiguration, ILoadAccount loadAccount,
+            ILockAccount lockAccount, IUpdateAccountState updateAccountState, IUnitOfWork unitOfWork)
         {
+            _provideSendMoneyConfiguration = provideSendMoneyConfiguration
+                ?? throw new ArgumentNullException(nameof(provideSendMoneyConfiguration));
             _loadAccount = loadAccount ?? throw new ArgumentNullException(nameof(loadAccount));
             _lockAccount = lockAccount ?? throw new ArgumentNullException(nameof(lockAccount));
             _updateAccountState = updateAccountState ?? throw new ArgumentNullException(nameof(updateAccountState));
@@ -24,6 +27,8 @@ namespace Buckpal.Core.Application.Services
 
         public async Task SendMoney(SendMoneyCommand command)
         {
+            await CheckTransactionAmount(Money.Of(command.Amount));
+
             var (sourceAccount, targetAccount) = await LoadAccounts(command.SourceAccountId, command.TargetAccountId);
 
             await LockAccounts(command.SourceAccountId, command.TargetAccountId);
@@ -35,6 +40,13 @@ namespace Buckpal.Core.Application.Services
 
             await UpdateAccounts(sourceAccount, targetAccount);
             await UnlockAccounts(command.SourceAccountId, command.TargetAccountId);
+        }
+
+        private async Task CheckTransactionAmount(Money transactionAmount)
+        {
+            var maximumAllowedTransactionAmount = await _provideSendMoneyConfiguration.GetMaximumAllowedTransactionAmount();
+            if (maximumAllowedTransactionAmount < transactionAmount)
+                throw new AllowedTransactionAmountOverdrawException(transactionAmount, maximumAllowedTransactionAmount);
         }
 
         private async Task<(Account, Account)> LoadAccounts(long sourceAccountId, long targetAccountId)

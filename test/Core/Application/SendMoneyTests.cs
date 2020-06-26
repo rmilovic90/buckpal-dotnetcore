@@ -43,8 +43,8 @@ namespace Buckpal.Core.Application
             _updateAccountState = Substitute.For<IUpdateAccountState>();
             _unitOfWork = Substitute.For<IUnitOfWork>();
 
-            _service = ApplicationServicesFactory.CreateSendMoneyService(_loadAccount, _lockAccount,
-                _updateAccountState, _unitOfWork);
+            _service = ApplicationServicesFactory.CreateSendMoneyService(_provideSendMoneyConfiguration, _loadAccount,
+                _lockAccount, _updateAccountState, _unitOfWork);
         }
 
         [Scenario]
