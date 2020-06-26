@@ -22,6 +22,7 @@ namespace Buckpal.Core.Application
         I want to send money from one account to another")]
     public sealed class SendMoneyTests : FeatureFixture
     {
+        private readonly IProvideSendMoneyConfiguration _provideSendMoneyConfiguration;
         private readonly ILoadAccount _loadAccount;
         private readonly ILockAccount _lockAccount;
         private readonly IUpdateAccountState _updateAccountState;
@@ -36,6 +37,7 @@ namespace Buckpal.Core.Application
 
         public SendMoneyTests()
         {
+            _provideSendMoneyConfiguration = Substitute.For<IProvideSendMoneyConfiguration>();
             _loadAccount = Substitute.For<ILoadAccount>();
             _lockAccount = Substitute.For<ILockAccount>();
             _updateAccountState = Substitute.For<IUpdateAccountState>();
@@ -176,6 +178,9 @@ namespace Buckpal.Core.Application
 
         private Task the_maximum_allowed_transaction_amount_is(Money amount)
         {
+            _provideSendMoneyConfiguration.GetMaximumAllowedTransactionAmount()
+                .Returns(Task.FromResult(amount));
+
             return Task.CompletedTask;
         }
 
