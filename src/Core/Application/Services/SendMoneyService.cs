@@ -17,12 +17,11 @@ namespace Buckpal.Core.Application.Services
         public SendMoneyService(IProvideSendMoneyConfiguration provideSendMoneyConfiguration, ILoadAccount loadAccount,
             ILockAccount lockAccount, IUpdateAccountState updateAccountState, IUnitOfWork unitOfWork)
         {
-            _provideSendMoneyConfiguration = provideSendMoneyConfiguration
-                ?? throw new ArgumentNullException(nameof(provideSendMoneyConfiguration));
-            _loadAccount = loadAccount ?? throw new ArgumentNullException(nameof(loadAccount));
-            _lockAccount = lockAccount ?? throw new ArgumentNullException(nameof(lockAccount));
-            _updateAccountState = updateAccountState ?? throw new ArgumentNullException(nameof(updateAccountState));
-            _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+            _provideSendMoneyConfiguration = provideSendMoneyConfiguration;
+            _loadAccount = loadAccount;
+            _lockAccount = lockAccount;
+            _updateAccountState = updateAccountState;
+            _unitOfWork = unitOfWork;
         }
 
         public async Task SendMoney(SendMoneyCommand command)
